@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Security Practice Lab</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .message-box {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .error {
+            color: red;
+            margin: 5px 0;
+        }
+        .success {
+            color: green;
+            margin: 5px 0;
+        }
+        #messages {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Security Practice Lab</h1>
+
+    <!-- Redirect Form with Validation -->
+    <div>
+        <h2>URL Redirect Practice</h2>
+        <form id="redirectForm" onsubmit="handleRedirect(event)">
+            <input type="text" id="redirectUrl" placeholder="Enter URL to redirect">
+            <button type="submit">Redirect</button>
+            <div id="redirectError" class="error"></div>
+        </form>
+    </div>
+
+    <!-- Message Board with XSS Vulnerability -->
+    <div>
+        <h2>Message Board</h2>
+        <form id="messageForm" onsubmit="postMessage(event)">
+            <input type="text" id="username" placeholder="Username">
+            <textarea id="message" placeholder="Your message"></textarea>
+            <button type="submit">Post Message</button>
+            <div id="messageError" class="error"></div>
+        </form>
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        // Vulnerable URL validation
+        function isValidUrl(url) {
+            // Deliberately weak validation
+            return url.startsWith('http://') || url.startsWith('https://');
+        }
+
+        // Vulnerable message validation
+        function sanitizeMessage(message) {
+            // Deliberately weak sanitization
+            return message.replace(/script/gi, ''); // Can be bypassed with "scrscriptipt"
+        }
+
+        // Redirect handler
+        function handleRedirect(event) {
+            event.preventDefault();
+            
+            const url = document.getElementById('redirectUrl').value;
+            const errorDiv = document.getElementById('redirectError');
+            
+            try {
+                // Vulnerable validation logic
+                if (isValidUrl(url)) {
+                    // Log for debugging
+                    console.log('Redirecting to:', url);
+                    
+                    // Redirect after delay for debugging purposes
+                    setTimeout(() => {
+                        window.location.href = url;
+                    }, 1500);
+                    
+                    errorDiv.textContent = 'Redirecting...';
+                    errorDiv.className = 'success';
+                } else {
+                    throw new Error('Invalid URL format');
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.className = 'error';
+                console.error('Redirect error:', error);
+            }
+        }
+
+        // Message posting with XSS vulnerability
+        function postMessage(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const message = document.getElementById('message').value;
+            const errorDiv = document.getElementById('messageError');
+            
+            try {
+                // Vulnerable message processing
+                if (username && message) {
+                    // Attempt to sanitize (deliberately weak)
+                    const sanitizedMessage = sanitizeMessage(message);
+                    
+                    // Log for debugging
+                    console.log('Posting message:', {
+                        username: username,
+                        original: message,
+                        sanitized: sanitizedMessage
+                    });
+                    
+                    // Create message element with vulnerability
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'message-box';
+                    // Vulnerable innerHTML assignment
+                    messageDiv.innerHTML = `
+                        <strong>${username}</strong>: ${sanitizedMessage}
+                    `;
+                    
+                    document.getElementById('messages').prepend(messageDiv);
+                    
+                    // Clear form
+                    document.getElementById('messageForm').reset();
+                    errorDiv.textContent = '';
+                } else {
+                    throw new Error('Username and message are required');
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                console.error('Message error:', error);
+            }
+        }
+
+        // Debug helper function
+        function debugState() {
+            console.log({
+                messages: document.getElementById('messages').innerHTML,
+                lastUrl: document.getElementById('redirectUrl').value,
+                forms: {
+                    redirect: document.getElementById('redirectForm').elements,
+                    message: document.getElementById('messageForm').elements
+                }
+            });
+        }
+    </script>
+</body>
+</html>
